@@ -1,48 +1,104 @@
 package com.ecosystem.ms_customer.entity;
 
-import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
+import com.ecosystem.ms_customer.resource.dto.CreateCustomer;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttribute;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 
+import java.io.Serial;
+import java.io.Serializable;
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.UUID;
 
-@Entity
-@Table(name = "tb_customer")
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-public @Data class Customer {
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "id", unique = true, nullable = false, updatable = false)
-    private UUID id;
+@DynamoDbBean
+public class Customer implements Serializable {
 
-    @Column(name = "name", nullable = false)
-    private String name;
+    @Serial
+    private static final long serialVersionUID = 1L;
 
-    @Column(name = "email", unique = true, nullable = false, updatable = false)
     private String email;
-
-    @Column(name = "password", nullable = false)
     private String password;
-
-    @Column(name = "description", nullable = false)
+    private String name;
+    private String profilePicture;
     private String description;
-
-    @Column(name = "birth_date", nullable = false)
     private LocalDate birthDate;
+    private Instant createdAt;
 
-    @UpdateTimestamp
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
+    public static Customer fromCreateCustomer(CreateCustomer body) {
+        var customer = new Customer();
 
-    @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+        customer.setEmail(body.email());
+        customer.setPassword(body.password());
+        customer.setName(body.name());
+        customer.setProfilePicture(body.profilePicture());
+        customer.setDescription(body.description());
+        customer.setBirthDate(body.birthDate());
+        customer.setCreatedAt(Instant.now());
+
+        return customer;
+    }
+
+    @DynamoDbPartitionKey
+    @DynamoDbAttribute("email")
+    public String getEmail() {
+        return email;
+    }
+
+    @DynamoDbAttribute("password")
+    public String getPassword() {
+        return password;
+    }
+
+    @DynamoDbAttribute("name")
+    public String getName() {
+        return name;
+    }
+
+    @DynamoDbAttribute("profile_picture")
+    public String getProfilePicture() {
+        return profilePicture;
+    }
+
+    @DynamoDbAttribute("description")
+    public String getDescription() {
+        return description;
+    }
+
+    @DynamoDbAttribute("birth_date")
+    public LocalDate getBirthDate() {
+        return birthDate;
+    }
+
+    @DynamoDbAttribute("created_at")
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setProfilePicture(String profilePicture) {
+        this.profilePicture = profilePicture;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public void setBirthDate(LocalDate birthDate) {
+        this.birthDate = birthDate;
+    }
+
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
+    }
 }

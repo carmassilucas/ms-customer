@@ -8,9 +8,10 @@ import org.hibernate.validator.constraints.Length;
 import java.time.LocalDate;
 
 public record CreateCustomer(
-        @NotBlank String name,
         @NotBlank @Email String email,
         @NotBlank @Length(min = 8, max = 32) String password,
-        @NotBlank String description,
+        @NotBlank String name,
+        String profilePicture,
+        String description,
         @NotNull LocalDate birthDate
 ) { }

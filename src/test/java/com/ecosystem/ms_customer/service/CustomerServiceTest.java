@@ -1,8 +1,10 @@
 package com.ecosystem.ms_customer.service;
 
 import com.ecosystem.ms_customer.entity.Customer;
-import com.ecosystem.ms_customer.repository.CustomerRepository;
+import com.ecosystem.ms_customer.exception.CustomerAlreadyExistsException;
+import com.ecosystem.ms_customer.exception.MinorException;
 import com.ecosystem.ms_customer.resource.dto.CreateCustomer;
+import io.awspring.cloud.dynamodb.DynamoDbTemplate;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -11,9 +13,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import software.amazon.awssdk.enhanced.dynamodb.Key;
 
 import java.time.LocalDate;
-import java.util.Optional;
 
 @ExtendWith(MockitoExtension.class)
 public class CustomerServiceTest {
@@ -22,7 +24,7 @@ public class CustomerServiceTest {
     private CustomerService service;
 
     @Mock
-    private CustomerRepository repository;
+    private DynamoDbTemplate dynamoDb;
 
     @Test
     @DisplayName("Should be possible create customer.")
@@ -31,11 +33,12 @@ public class CustomerServiceTest {
                 "name",
                 "email@email.com",
                 "secretpassword",
-                "description",
+                null,
+                null,
                 LocalDate.now().minusYears(18)
         );
 
-        Mockito.when(this.repository.findByEmail(Mockito.any())).thenReturn(Optional.empty());
+        Mockito.when(this.dynamoDb.load(Key.builder().partitionValue(body.email()).build(), Customer.class)).thenReturn(null);
 
         Assertions.assertDoesNotThrow(() -> this.service.create(body));
     }
@@ -47,13 +50,14 @@ public class CustomerServiceTest {
                 "name",
                 "email@email.com",
                 "secretpassword",
-                "description",
+                null,
+                null,
                 LocalDate.now().minusYears(18)
         );
 
-        Mockito.when(this.repository.findByEmail(Mockito.any())).thenReturn(Optional.of(new Customer()));
+        Mockito.when(this.dynamoDb.load(Key.builder().partitionValue(body.email()).build(), Customer.class)).thenReturn(new Customer());
 
-        Assertions.assertThrows(RuntimeException.class, () -> this.service.create(body));
+        Assertions.assertThrows(CustomerAlreadyExistsException.class, () -> this.service.create(body));
     }
 
     @Test
@@ -63,10 +67,11 @@ public class CustomerServiceTest {
                 "name",
                 "email@email.com",
                 "secretpassword",
-                "description",
+                null,
+                null,
                 LocalDate.now().minusYears(16)
         );
 
-        Assertions.assertThrows(RuntimeException.class, () -> this.service.create(body));
+        Assertions.assertThrows(MinorException.class, () -> this.service.create(body));
     }
 }
