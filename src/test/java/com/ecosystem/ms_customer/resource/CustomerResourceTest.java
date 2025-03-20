@@ -80,6 +80,35 @@ public class CustomerResourceTest {
         ).andExpect(MockMvcResultMatchers.status().isUnprocessableEntity());
     }
 
+    @Test
+    @DisplayName("Should be possible get profile customer")
+    void should_be_possible_get_profile_customer() throws Exception {
+        var body = new CreateCustomer(
+                "email@email.com",
+                "secretpassword",
+                "name",
+                null,
+                null,
+                LocalDate.now().minusYears(18)
+        );
+
+        var customer = Customer.fromCreateCustomer(body);
+
+        this.dynamoDb.save(customer);
+
+        this.mvc.perform(MockMvcRequestBuilders.get("/v1/customers/email@email.com/profile")
+                .contentType(MediaType.APPLICATION_JSON)
+        ).andExpect(MockMvcResultMatchers.status().isOk());
+    }
+
+    @Test
+    @DisplayName("Should not be possible get profile customer when customer not found")
+    void should_not_be_possible_get_profile_customer_when_customer_not_found() throws Exception {
+        this.mvc.perform(MockMvcRequestBuilders.get("/v1/customers/email@email.com/profile")
+                .contentType(MediaType.APPLICATION_JSON)
+        ).andExpect(MockMvcResultMatchers.status().isNotFound());
+    }
+
     private static String toJSON(Object object) throws JsonProcessingException {
         final ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());

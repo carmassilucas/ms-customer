@@ -2,6 +2,7 @@ package com.ecosystem.ms_customer.service;
 
 import com.ecosystem.ms_customer.entity.Customer;
 import com.ecosystem.ms_customer.exception.CustomerAlreadyExistsException;
+import com.ecosystem.ms_customer.exception.CustomerNotFoundException;
 import com.ecosystem.ms_customer.exception.MinorException;
 import com.ecosystem.ms_customer.resource.dto.CreateCustomer;
 import io.awspring.cloud.dynamodb.DynamoDbTemplate;
@@ -73,5 +74,25 @@ public class CustomerServiceTest {
         );
 
         Assertions.assertThrows(MinorException.class, () -> this.service.create(body));
+    }
+
+    @Test
+    @DisplayName("Should be possible get profile customer")
+    void should_be_possible_get_profile_customer() {
+        String email = "email@email.com";
+
+        Mockito.when(this.dynamoDb.load(Key.builder().partitionValue(email).build(), Customer.class)).thenReturn(new Customer());
+
+        Assertions.assertNotNull(this.service.profile(email));
+    }
+
+    @Test
+    @DisplayName("Should not be possible get profile customer when customer not found")
+    void should_not_be_possible_get_profile_customer_when_customer_not_found() {
+        String email = "email@email.com";
+
+        Mockito.when(this.dynamoDb.load(Key.builder().partitionValue(email).build(), Customer.class)).thenReturn(null);
+
+        Assertions.assertThrows(CustomerNotFoundException.class, () -> this.service.profile(email));
     }
 }
