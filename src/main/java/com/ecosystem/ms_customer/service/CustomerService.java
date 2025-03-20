@@ -7,6 +7,7 @@ import com.ecosystem.ms_customer.exception.MinorException;
 import com.ecosystem.ms_customer.resource.dto.CreateCustomer;
 import com.ecosystem.ms_customer.resource.dto.CustomerProfileResponse;
 import io.awspring.cloud.dynamodb.DynamoDbTemplate;
+import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 
@@ -40,5 +41,20 @@ public class CustomerService {
             throw new CustomerNotFoundException();
 
         return CustomerProfileResponse.fromCustomer(customer);
+    }
+
+    public Customer update(String email, UpdateCustomer body) {
+        var customer = getCustomer(email);
+
+        if (customer == null)
+            throw new CustomerNotFoundException();
+
+        BeanUtils.copyProperties(body, customer);
+
+        return this.dynamoDb.update(customer);
+    }
+
+    private Customer getCustomer(String email) {
+        return this.dynamoDb.load(Key.builder().partitionValue(email).build(), Customer.class);
     }
 }

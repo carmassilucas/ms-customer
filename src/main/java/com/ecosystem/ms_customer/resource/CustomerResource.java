@@ -28,4 +28,10 @@ public class CustomerResource {
     public ResponseEntity<CustomerProfileResponse> profile(@PathVariable("email") String email) {
         return ResponseEntity.ok(this.service.profile(email));
     }
+
+    @PutMapping("/{email}")
+    public ResponseEntity<Void> update(@PathVariable("email") String email, @RequestBody UpdateCustomer body) {
+        this.service.update(email, body);
+        return ResponseEntity.noContent().build();
+    }
 }
