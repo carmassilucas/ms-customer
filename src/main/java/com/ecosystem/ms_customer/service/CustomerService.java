@@ -5,7 +5,8 @@ import com.ecosystem.ms_customer.exception.CustomerAlreadyExistsException;
 import com.ecosystem.ms_customer.exception.CustomerNotFoundException;
 import com.ecosystem.ms_customer.exception.MinorException;
 import com.ecosystem.ms_customer.resource.dto.CreateCustomer;
-import com.ecosystem.ms_customer.resource.dto.CustomerProfileResponse;
+import com.ecosystem.ms_customer.resource.dto.CustomerProfile;
+import com.ecosystem.ms_customer.resource.dto.UpdateCustomer;
 import io.awspring.cloud.dynamodb.DynamoDbTemplate;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -26,7 +27,7 @@ public class CustomerService {
         if (LocalDate.now().minusYears(18).isBefore(body.birthDate()))
             throw new MinorException();
 
-        var customer = this.dynamoDb.load(Key.builder().partitionValue(body.email()).build(), Customer.class);
+        var customer = getCustomer(body.email());
 
         if (customer != null)
             throw new CustomerAlreadyExistsException();
@@ -34,13 +35,13 @@ public class CustomerService {
         this.dynamoDb.save(Customer.fromCreateCustomer(body));
     }
 
-    public CustomerProfileResponse profile(String email) {
-        var customer = this.dynamoDb.load(Key.builder().partitionValue(email).build(), Customer.class);
+    public CustomerProfile profile(String email) {
+        var customer = getCustomer(email);
 
         if (customer == null)
             throw new CustomerNotFoundException();
 
-        return CustomerProfileResponse.fromCustomer(customer);
+        return CustomerProfile.fromCustomer(customer);
     }
 
     public Customer update(String email, UpdateCustomer body) {

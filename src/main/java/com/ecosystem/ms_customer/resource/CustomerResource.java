@@ -1,7 +1,8 @@
 package com.ecosystem.ms_customer.resource;
 
 import com.ecosystem.ms_customer.resource.dto.CreateCustomer;
-import com.ecosystem.ms_customer.resource.dto.CustomerProfileResponse;
+import com.ecosystem.ms_customer.resource.dto.CustomerProfile;
+import com.ecosystem.ms_customer.resource.dto.UpdateCustomer;
 import com.ecosystem.ms_customer.service.CustomerService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -25,7 +26,7 @@ public class CustomerResource {
     }
 
     @GetMapping("/{email}/profile")
-    public ResponseEntity<CustomerProfileResponse> profile(@PathVariable("email") String email) {
+    public ResponseEntity<CustomerProfile> profile(@PathVariable("email") String email) {
         return ResponseEntity.ok(this.service.profile(email));
     }
 
