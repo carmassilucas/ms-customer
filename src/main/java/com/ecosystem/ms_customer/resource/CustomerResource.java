@@ -1,14 +1,12 @@
 package com.ecosystem.ms_customer.resource;
 
 import com.ecosystem.ms_customer.resource.dto.CreateCustomer;
+import com.ecosystem.ms_customer.resource.dto.CustomerProfileResponse;
 import com.ecosystem.ms_customer.service.CustomerService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/v1/customers")
@@ -24,5 +22,10 @@ public class CustomerResource {
     public ResponseEntity<Void> create(@RequestBody @Valid CreateCustomer body) {
         this.service.create(body);
         return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    @GetMapping("/{email}/profile")
+    public ResponseEntity<CustomerProfileResponse> profile(@PathVariable("email") String email) {
+        return ResponseEntity.ok(this.service.profile(email));
     }
 }

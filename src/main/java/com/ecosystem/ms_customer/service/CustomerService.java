@@ -2,8 +2,10 @@ package com.ecosystem.ms_customer.service;
 
 import com.ecosystem.ms_customer.entity.Customer;
 import com.ecosystem.ms_customer.exception.CustomerAlreadyExistsException;
+import com.ecosystem.ms_customer.exception.CustomerNotFoundException;
 import com.ecosystem.ms_customer.exception.MinorException;
 import com.ecosystem.ms_customer.resource.dto.CreateCustomer;
+import com.ecosystem.ms_customer.resource.dto.CustomerProfileResponse;
 import io.awspring.cloud.dynamodb.DynamoDbTemplate;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
@@ -31,4 +33,12 @@ public class CustomerService {
         this.dynamoDb.save(Customer.fromCreateCustomer(body));
     }
 
+    public CustomerProfileResponse profile(String email) {
+        var customer = this.dynamoDb.load(Key.builder().partitionValue(email).build(), Customer.class);
+
+        if (customer == null)
+            throw new CustomerNotFoundException();
+
+        return CustomerProfileResponse.fromCustomer(customer);
+    }
 }
