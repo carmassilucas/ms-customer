@@ -3,10 +3,13 @@ package com.ecosystem.ms_customer.resource;
 import com.ecosystem.ms_customer.config.DynamoDbTestConfig;
 import com.ecosystem.ms_customer.entity.Customer;
 import com.ecosystem.ms_customer.resource.dto.CreateCustomer;
+import com.ecosystem.ms_customer.resource.dto.CustomerProfile;
+import com.ecosystem.ms_customer.resource.dto.UpdateCustomer;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.awspring.cloud.dynamodb.DynamoDbTemplate;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -109,9 +112,63 @@ public class CustomerResourceTest {
         ).andExpect(MockMvcResultMatchers.status().isNotFound());
     }
 
+    @Test
+    @DisplayName("Should be possible update customer data")
+    void should_be_possible_update_customer_data() throws Exception {
+        var body = new UpdateCustomer(
+                "updated name",
+                "updated description",
+                LocalDate.now().minusYears(30)
+        );
+
+        var customer = Customer.fromCreateCustomer(new CreateCustomer(
+                "email@email.com",
+                "secretpassword",
+                "name",
+                null,
+                null,
+                LocalDate.now().minusYears(18)
+        ));
+
+        this.dynamoDb.save(customer);
+
+        this.mvc.perform(MockMvcRequestBuilders.put("/v1/customers/email@email.com")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(toJSON(body))
+        ).andExpect(MockMvcResultMatchers.status().isNoContent());
+
+        var response = this.mvc.perform(MockMvcRequestBuilders.get("/v1/customers/email@email.com/profile")
+                .contentType(MediaType.APPLICATION_JSON)
+        ).andReturn().getResponse().getContentAsString();
+
+        var profile = fromJSON(response);
+
+        Assertions.assertEquals(body.name(), profile.name());
+    }
+
+    @Test
+    @DisplayName("Should not be possible update customer when customer not found")
+    void should_not_be_possible_update_customer_when_customer_not_found() throws Exception {
+        var body = new UpdateCustomer(
+                "updated name",
+                "updated description",
+                LocalDate.now().minusYears(30)
+        );
+
+        this.mvc.perform(MockMvcRequestBuilders.put("/v1/customers/email@email.com")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(toJSON(body))
+        ).andExpect(MockMvcResultMatchers.status().isNotFound());
+    }
+
     private static String toJSON(Object object) throws JsonProcessingException {
         final ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
         return objectMapper.writeValueAsString(object);
+    }
+
+    public static CustomerProfile fromJSON(String json) throws JsonProcessingException {
+        final ObjectMapper objectMapper = new ObjectMapper();
+        return objectMapper.readValue(json, CustomerProfile.class);
     }
 }
