@@ -9,6 +9,7 @@ import java.io.Serial;
 import java.io.Serializable;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Objects;
 
 @DynamoDbBean
 public class Customer implements Serializable {
@@ -100,5 +101,30 @@ public class Customer implements Serializable {
 
     public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
+    }
+
+    @Override
+    public String toString() {
+        return "Customer{" +
+                "email='" + email + '\'' +
+                ", password='" + password + '\'' +
+                ", name='" + name + '\'' +
+                ", profilePicture='" + profilePicture + '\'' +
+                ", description='" + description + '\'' +
+                ", birthDate=" + birthDate +
+                ", createdAt=" + createdAt +
+                '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+        Customer customer = (Customer) o;
+        return Objects.equals(email, customer.email) && Objects.equals(password, customer.password) && Objects.equals(name, customer.name) && Objects.equals(profilePicture, customer.profilePicture) && Objects.equals(description, customer.description) && Objects.equals(birthDate, customer.birthDate) && Objects.equals(createdAt, customer.createdAt);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(email, password, name, profilePicture, description, birthDate, createdAt);
     }
 }
