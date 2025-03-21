@@ -56,8 +56,11 @@ public class CustomerResourceTest {
         );
 
         this.mvc.perform(MockMvcRequestBuilders.post("/v1/customers")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(toJSON(body))
+                .param("email", body.email())
+                .param("password", body.password())
+                .param("name", body.name())
+                .param("birthDate", body.birthDate().toString())
+                .contentType(MediaType.MULTIPART_FORM_DATA)
         ).andExpect(MockMvcResultMatchers.status().isCreated());
     }
 
@@ -78,8 +81,11 @@ public class CustomerResourceTest {
         this.dynamoDb.save(customer);
 
         this.mvc.perform(MockMvcRequestBuilders.post("/v1/customers")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(toJSON(body))
+                .param("email", body.email())
+                .param("password", body.password())
+                .param("name", body.name())
+                .param("birthDate", body.birthDate().toString())
+                .contentType(MediaType.MULTIPART_FORM_DATA)
         ).andExpect(MockMvcResultMatchers.status().isUnprocessableEntity());
     }
 

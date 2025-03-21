@@ -31,7 +31,6 @@ public class Customer implements Serializable {
         customer.setEmail(body.email());
         customer.setPassword(body.password());
         customer.setName(body.name());
-        customer.setProfilePicture(body.profilePicture());
         customer.setDescription(body.description());
         customer.setBirthDate(body.birthDate());
         customer.setCreatedAt(Instant.now());

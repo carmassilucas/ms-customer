@@ -18,21 +18,26 @@ import java.time.LocalDate;
 public class CustomerService {
 
     private final DynamoDbTemplate dynamoDb;
+    private final StorageFileService service;
 
-    public CustomerService(DynamoDbTemplate dynamoDb) {
+    public CustomerService(DynamoDbTemplate dynamoDb, StorageFileService service) {
         this.dynamoDb = dynamoDb;
+        this.service = service;
     }
 
     public void create(CreateCustomer body) {
         if (LocalDate.now().minusYears(18).isBefore(body.birthDate()))
             throw new MinorException();
 
-        var customer = getCustomer(body.email());
-
-        if (customer != null)
+        if (getCustomer(body.email()) != null)
             throw new CustomerAlreadyExistsException();
 
-        this.dynamoDb.save(Customer.fromCreateCustomer(body));
+        var customer = Customer.fromCreateCustomer(body);
+
+        if (body.profilePicture() != null)
+            customer.setProfilePicture(this.service.upload(body.profilePicture()));
+
+        this.dynamoDb.save(customer);
     }
 
     public CustomerProfile profile(String email) {

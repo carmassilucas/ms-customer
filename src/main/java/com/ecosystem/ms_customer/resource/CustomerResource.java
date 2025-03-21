@@ -19,8 +19,8 @@ public class CustomerResource {
         this.service = service;
     }
 
-    @PostMapping
-    public ResponseEntity<Void> create(@RequestBody @Valid CreateCustomer body) {
+    @PostMapping(consumes = "multipart/form-data")
+    public ResponseEntity<Void> create(@ModelAttribute @Valid CreateCustomer body) {
         this.service.create(body);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
