@@ -31,7 +31,7 @@ public class CustomerResource {
     }
 
     @PutMapping("/{email}")
-    public ResponseEntity<Void> update(@PathVariable("email") String email, @RequestBody UpdateCustomer body) {
+    public ResponseEntity<Void> update(@PathVariable("email") String email, @RequestBody @Valid UpdateCustomer body) {
         this.service.update(email, body);
         return ResponseEntity.noContent().build();
     }

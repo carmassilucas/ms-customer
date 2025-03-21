@@ -29,6 +29,7 @@ import java.time.LocalDate;
 @AutoConfigureMockMvc
 @Import(DynamoDbTestConfig.class)
 public class CustomerResourceTest {
+
     @Autowired
     private MockMvc mvc;
 
@@ -90,7 +91,28 @@ public class CustomerResourceTest {
     }
 
     @Test
-    @DisplayName("Should be possible get profile customer")
+    @DisplayName("Should not be possible create customer with null data values.")
+    void should_not_be_possible_create_customer_with_null_data_values() throws Exception {
+        var body = new CreateCustomer(
+                "email@email.com",
+                null,
+                "name",
+                null,
+                null,
+                LocalDate.now().minusYears(18)
+        );
+
+        this.mvc.perform(MockMvcRequestBuilders.post("/v1/customers")
+                .param("email", body.email())
+                .param("password", body.password())
+                .param("name", body.name())
+                .param("birthDate", body.birthDate().toString())
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+        ).andExpect(MockMvcResultMatchers.status().isUnprocessableEntity());
+    }
+
+    @Test
+    @DisplayName("Should be possible get profile customer.")
     void should_be_possible_get_profile_customer() throws Exception {
         var body = new CreateCustomer(
                 "email@email.com",
@@ -111,7 +133,7 @@ public class CustomerResourceTest {
     }
 
     @Test
-    @DisplayName("Should not be possible get profile customer when customer not found")
+    @DisplayName("Should not be possible get profile customer when customer not found.")
     void should_not_be_possible_get_profile_customer_when_customer_not_found() throws Exception {
         this.mvc.perform(MockMvcRequestBuilders.get("/v1/customers/email@email.com/profile")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -119,7 +141,7 @@ public class CustomerResourceTest {
     }
 
     @Test
-    @DisplayName("Should be possible update customer data")
+    @DisplayName("Should be possible update customer data.")
     void should_be_possible_update_customer_data() throws Exception {
         var body = new UpdateCustomer(
                 "updated name",
@@ -153,7 +175,7 @@ public class CustomerResourceTest {
     }
 
     @Test
-    @DisplayName("Should not be possible update customer when customer not found")
+    @DisplayName("Should not be possible update customer when customer not found.")
     void should_not_be_possible_update_customer_when_customer_not_found() throws Exception {
         var body = new UpdateCustomer(
                 "updated name",
@@ -165,6 +187,32 @@ public class CustomerResourceTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(toJSON(body))
         ).andExpect(MockMvcResultMatchers.status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("Should be possible update customer data with null data values.")
+    void should_not_be_possible_update_customer_data_with_null_data_values() throws Exception {
+        var body = new UpdateCustomer(
+                null,
+                "updated description",
+                LocalDate.now().minusYears(30)
+        );
+
+        var customer = Customer.fromCreateCustomer(new CreateCustomer(
+                "email@email.com",
+                "secretpassword",
+                "name",
+                null,
+                null,
+                LocalDate.now().minusYears(18)
+        ));
+
+        this.dynamoDb.save(customer);
+
+        this.mvc.perform(MockMvcRequestBuilders.put("/v1/customers/email@email.com")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(toJSON(body))
+        ).andExpect(MockMvcResultMatchers.status().isUnprocessableEntity());
     }
 
     private static String toJSON(Object object) throws JsonProcessingException {
