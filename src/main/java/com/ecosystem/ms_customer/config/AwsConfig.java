@@ -15,22 +15,27 @@ import java.net.URI;
 @Configuration
 public class AwsConfig {
 
-    @Value("${aws.localstack.endpoint}")
-    private String endpoint;
+    private final String endpoint;
 
-    @Value("${aws.localstack.access-key}")
-    private String accessKey;
+    private final String accessKey;
 
-    @Value("${aws.localstack.secret-key}")
-    private String secretKey;
+    private final String secretKey;
+
+    public AwsConfig(@Value("${aws.localstack.endpoint}") String endpoint,
+                     @Value("${aws.localstack.access-key}") String accessKey,
+                     @Value("${aws.localstack.secret-key}") String secretKey) {
+        this.endpoint = endpoint;
+        this.accessKey = accessKey;
+        this.secretKey = secretKey;
+    }
 
     @Bean
     public DynamoDbClient configureDynamoDbClient() {
         return DynamoDbClient.builder()
-                .endpointOverride(URI.create("http://localhost:4566"))
+                .endpointOverride(URI.create(this.endpoint))
                 .region(Region.SA_EAST_1)
                 .credentialsProvider(StaticCredentialsProvider.create(
-                        AwsBasicCredentials.create("localstack", "localstack")
+                        AwsBasicCredentials.create(this.accessKey, this.secretKey)
                 ))
                 .build();
     }
@@ -38,11 +43,11 @@ public class AwsConfig {
     @Bean
     public S3Client configureS3Client() {
         return S3Client.builder()
-                .endpointOverride(URI.create("http://localhost:4566"))
+                .endpointOverride(URI.create(this.endpoint))
                 .region(Region.SA_EAST_1)
                 .forcePathStyle(true)
                 .credentialsProvider(StaticCredentialsProvider.create(
-                        AwsBasicCredentials.create("localstack", "localstack")
+                        AwsBasicCredentials.create(this.accessKey, this.accessKey)
                 ))
                 .serviceConfiguration(S3Configuration.builder().build())
                 .build();
