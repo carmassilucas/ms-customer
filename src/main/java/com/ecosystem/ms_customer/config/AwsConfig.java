@@ -33,7 +33,7 @@ public class AwsConfig {
     public DynamoDbClient configureDynamoDbClient() {
         return DynamoDbClient.builder()
                 .endpointOverride(URI.create(this.endpoint))
-                .region(Region.SA_EAST_1)
+                .region(Region.US_EAST_1)
                 .credentialsProvider(StaticCredentialsProvider.create(
                         AwsBasicCredentials.create(this.accessKey, this.secretKey)
                 ))
@@ -44,7 +44,7 @@ public class AwsConfig {
     public S3Client configureS3Client() {
         return S3Client.builder()
                 .endpointOverride(URI.create(this.endpoint))
-                .region(Region.SA_EAST_1)
+                .region(Region.US_EAST_1)
                 .forcePathStyle(true)
                 .credentialsProvider(StaticCredentialsProvider.create(
                         AwsBasicCredentials.create(this.accessKey, this.accessKey)
