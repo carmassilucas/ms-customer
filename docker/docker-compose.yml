@@ -1,0 +1,21 @@
+services:
+  localstack:
+    container_name: "localstack"
+    image: localstack/localstack:latest
+    restart: always
+    ports:
+      - "127.0.0.1:4566:4566"
+      - "127.0.0.1:4510:4510"
+    environment:
+      - DEBUG=1
+      - AWS_ACCESS_KEY_ID=localstack
+      - AWS_SECRET_ACCESS_KEY=localstack
+      - AWS_DEFAULT_REGION=us-east-1
+    volumes:
+      - "localstack-volume:/var/lib/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "./start-resources.sh:/etc/localstack/init/ready.d/start-resources.sh"
+
+volumes:
+  localstack-volume:
+    driver: local
