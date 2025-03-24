@@ -192,12 +192,6 @@ public class CustomerResourceTest {
     @Test
     @DisplayName("Should be possible update customer data with null data values.")
     void should_not_be_possible_update_customer_data_with_null_data_values() throws Exception {
-        var body = new UpdateCustomer(
-                null,
-                "updated description",
-                LocalDate.now().minusYears(30)
-        );
-
         var customer = Customer.fromCreateCustomer(new CreateCustomer(
                 "email@email.com",
                 "secretpassword",
@@ -211,8 +205,16 @@ public class CustomerResourceTest {
 
         this.mvc.perform(MockMvcRequestBuilders.put("/v1/customers/email@email.com")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(toJSON(body))
-        ).andExpect(MockMvcResultMatchers.status().isUnprocessableEntity());
+                .content(toJSON(new UpdateCustomer(null,null, null)))
+        ).andExpect(MockMvcResultMatchers.status().isNoContent());
+
+        var response = this.mvc.perform(MockMvcRequestBuilders.get("/v1/customers/email@email.com/profile")
+                .contentType(MediaType.APPLICATION_JSON)
+        ).andReturn().getResponse().getContentAsString();
+
+        var profile = fromJSON(response);
+
+        Assertions.assertEquals(customer.getName(), profile.name());
     }
 
     private static String toJSON(Object object) throws JsonProcessingException {

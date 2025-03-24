@@ -1,6 +1,7 @@
 package com.ecosystem.ms_customer.service;
 
 import com.ecosystem.ms_customer.entity.Customer;
+import com.ecosystem.ms_customer.exception.CommonException;
 import com.ecosystem.ms_customer.exception.CustomerAlreadyExistsException;
 import com.ecosystem.ms_customer.exception.CustomerNotFoundException;
 import com.ecosystem.ms_customer.exception.MinorException;
@@ -8,11 +9,12 @@ import com.ecosystem.ms_customer.resource.dto.CreateCustomer;
 import com.ecosystem.ms_customer.resource.dto.CustomerProfile;
 import com.ecosystem.ms_customer.resource.dto.UpdateCustomer;
 import io.awspring.cloud.dynamodb.DynamoDbTemplate;
-import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 
 import java.time.LocalDate;
+import java.util.Arrays;
+
 
 @Service
 public class CustomerService {
@@ -49,18 +51,37 @@ public class CustomerService {
         return CustomerProfile.fromCustomer(customer);
     }
 
-    public Customer update(String email, UpdateCustomer body) {
+    public void update(String email, UpdateCustomer body) {
         var customer = getCustomer(email);
 
         if (customer == null)
             throw new CustomerNotFoundException();
 
-        BeanUtils.copyProperties(body, customer);
+        copyNonNullProperties(body, customer);
 
-        return this.dynamoDb.update(customer);
+        this.dynamoDb.update(customer);
     }
 
     private Customer getCustomer(String email) {
         return this.dynamoDb.load(Key.builder().partitionValue(email).build(), Customer.class);
     }
+
+    public static void copyNonNullProperties(Object source, Object target) {
+        Arrays.stream(source.getClass().getDeclaredFields()).forEach(sourceField -> {
+            sourceField.setAccessible(true);
+
+            try {
+                var value = sourceField.get(source);
+
+                if (value != null && !value.toString().isBlank()) {
+                    var targetField = target.getClass().getDeclaredField(sourceField.getName());
+                    targetField.setAccessible(true);
+                    targetField.set(target, value);
+                }
+            } catch (IllegalAccessException | NoSuchFieldException e) {
+                throw new CommonException();
+            }
+        });
+    }
+
 }
