@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/v1/customers")
@@ -20,8 +21,8 @@ public class CustomerResource {
     }
 
     @PostMapping(consumes = "multipart/form-data")
-    public ResponseEntity<Void> create(@ModelAttribute @Valid CreateCustomer body) {
-        this.service.create(body);
+    public ResponseEntity<Void> create(@ModelAttribute @Valid CreateCustomer body, @RequestPart(value = "profilePicture",required = false) MultipartFile file) {
+        this.service.create(body, file);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 

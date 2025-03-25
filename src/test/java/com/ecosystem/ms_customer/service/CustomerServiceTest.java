@@ -36,13 +36,12 @@ public class CustomerServiceTest {
                 "secretpassword",
                 "name",
                 null,
-                null,
                 LocalDate.now().minusYears(18)
         );
 
         Mockito.when(this.dynamoDb.load(Key.builder().partitionValue(body.email()).build(), Customer.class)).thenReturn(null);
 
-        Assertions.assertDoesNotThrow(() -> this.service.create(body));
+        Assertions.assertDoesNotThrow(() -> this.service.create(body, null));
     }
 
     @Test
@@ -53,13 +52,12 @@ public class CustomerServiceTest {
                 "secretpassword",
                 "name",
                 null,
-                null,
                 LocalDate.now().minusYears(18)
         );
 
         Mockito.when(this.dynamoDb.load(Key.builder().partitionValue(body.email()).build(), Customer.class)).thenReturn(new Customer());
 
-        Assertions.assertThrows(CustomerAlreadyExistsException.class, () -> this.service.create(body));
+        Assertions.assertThrows(CustomerAlreadyExistsException.class, () -> this.service.create(body, null));
     }
 
     @Test
@@ -70,11 +68,10 @@ public class CustomerServiceTest {
                 "secretpassword",
                 "name",
                 null,
-                null,
                 LocalDate.now().minusYears(16)
         );
 
-        Assertions.assertThrows(MinorException.class, () -> this.service.create(body));
+        Assertions.assertThrows(MinorException.class, () -> this.service.create(body, null));
     }
 
     @Test

@@ -10,24 +10,24 @@ import com.ecosystem.ms_customer.resource.dto.CustomerProfile;
 import com.ecosystem.ms_customer.resource.dto.UpdateCustomer;
 import io.awspring.cloud.dynamodb.DynamoDbTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 
 import java.time.LocalDate;
 import java.util.Arrays;
 
-
 @Service
 public class CustomerService {
 
     private final DynamoDbTemplate dynamoDb;
-    private final StorageFileService service;
+    private final StorageFileService storage;
 
-    public CustomerService(DynamoDbTemplate dynamoDb, StorageFileService service) {
+    public CustomerService(DynamoDbTemplate dynamoDb, StorageFileService storage) {
         this.dynamoDb = dynamoDb;
-        this.service = service;
+        this.storage = storage;
     }
 
-    public void create(CreateCustomer body) {
+    public void create(CreateCustomer body, MultipartFile file) {
         if (LocalDate.now().minusYears(18).isBefore(body.birthDate()))
             throw new MinorException();
 
@@ -36,8 +36,8 @@ public class CustomerService {
 
         var customer = Customer.fromCreateCustomer(body);
 
-        if (body.profilePicture() != null)
-            customer.setProfilePicture(this.service.upload(body.profilePicture()));
+        if (file != null)
+            customer.setProfilePicture(this.storage.upload(file));
 
         this.dynamoDb.save(customer);
     }
@@ -83,5 +83,4 @@ public class CustomerService {
             }
         });
     }
-
 }

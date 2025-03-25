@@ -1,6 +1,6 @@
 package com.ecosystem.ms_customer.resource;
 
-import com.ecosystem.ms_customer.config.DynamoDbTestConfig;
+import com.ecosystem.ms_customer.config.AwsConfigTest;
 import com.ecosystem.ms_customer.entity.Customer;
 import com.ecosystem.ms_customer.resource.dto.CreateCustomer;
 import com.ecosystem.ms_customer.resource.dto.CustomerProfile;
@@ -14,20 +14,27 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.utils.IoUtils;
 
 import java.time.LocalDate;
+import java.util.Arrays;
+import java.util.Objects;
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@Import(DynamoDbTestConfig.class)
+@Import(AwsConfigTest.class)
 public class CustomerResourceTest {
 
     @Autowired
@@ -36,34 +43,77 @@ public class CustomerResourceTest {
     @Autowired
     private DynamoDbTemplate dynamoDb;
 
+    @Value("${aws.localstack.s3.bucket-name}")
+    private String bucket;
+
+    @Autowired
+    private S3Client s3Client;
+
     @BeforeEach
     void setup() {
         var customer = this.dynamoDb.load(Key.builder().partitionValue("email@email.com").build(), Customer.class);
 
-        if (customer != null)
-            this.dynamoDb.delete(customer);
+        if (customer == null) return;
+
+        if (customer.getProfilePicture() != null) {
+            var name = Arrays.stream(customer.getProfilePicture().split("/")).toList().getLast();
+
+            var request = DeleteObjectRequest.builder().bucket(bucket).key(name).build();
+            this.s3Client.deleteObject(request);
+        }
+
+        this.dynamoDb.delete(customer);
     }
 
     @Test
-    @DisplayName("Should be possible create customer.")
-    void should_be_possible_create_customer() throws Exception {
+    @DisplayName("Should be possible to create a customer with profile picture.")
+    void should_be_possible_create_customer_with_profile_picture() throws Exception {
+        var image = IoUtils.toByteArray(Objects.requireNonNull(getClass()
+                .getClassLoader()
+                .getResourceAsStream("upload/default-profile-picture.jpeg"))
+        );
+
+        var file = new MockMultipartFile("default-profile-picture.jpeg",image);
+
         var body = new CreateCustomer(
                 "email@email.com",
                 "secretpassword",
                 "name",
                 null,
+                LocalDate.now().minusYears(18)
+        );
+
+        this.mvc.perform(MockMvcRequestBuilders.multipart("/v1/customers")
+                        .file("profilePicture", file.getBytes())
+                        .param("email", body.email())
+                        .param("password", body.password())
+                        .param("name", body.name())
+                        .param("birthDate", body.birthDate().toString())
+                        .contentType(MediaType.MULTIPART_FORM_DATA)
+        ).andExpect(MockMvcResultMatchers.status().isCreated());
+    }
+
+    @Test
+    @DisplayName("Should be possible to create a customer without profile picture.")
+    void should_be_possible_create_customer_without_profile_picture() throws Exception {
+        var body = new CreateCustomer(
+                "email@email.com",
+                "secretpassword",
+                "name",
                 null,
                 LocalDate.now().minusYears(18)
         );
 
-        this.mvc.perform(MockMvcRequestBuilders.post("/v1/customers")
-                .param("email", body.email())
-                .param("password", body.password())
-                .param("name", body.name())
-                .param("birthDate", body.birthDate().toString())
-                .contentType(MediaType.MULTIPART_FORM_DATA)
+        this.mvc.perform(MockMvcRequestBuilders.multipart("/v1/customers")
+                        .param("email", body.email())
+                        .param("password", body.password())
+                        .param("name", body.name())
+                        .param("description", body.description())
+                        .param("birthDate", body.birthDate().toString())
+                        .contentType(MediaType.MULTIPART_FORM_DATA)
         ).andExpect(MockMvcResultMatchers.status().isCreated());
     }
+
 
     @Test
     @DisplayName("Should not be possible create customer with already registered email.")
@@ -73,7 +123,6 @@ public class CustomerResourceTest {
                 "secretpassword",
                 "name",
                 null,
-                null,
                 LocalDate.now().minusYears(18)
         );
 
@@ -81,12 +130,13 @@ public class CustomerResourceTest {
 
         this.dynamoDb.save(customer);
 
-        this.mvc.perform(MockMvcRequestBuilders.post("/v1/customers")
-                .param("email", body.email())
-                .param("password", body.password())
-                .param("name", body.name())
-                .param("birthDate", body.birthDate().toString())
-                .contentType(MediaType.MULTIPART_FORM_DATA)
+        this.mvc.perform(MockMvcRequestBuilders.multipart("/v1/customers")
+                        .param("email", body.email())
+                        .param("password", body.password())
+                        .param("name", body.name())
+                        .param("description", body.description())
+                        .param("birthDate", body.birthDate().toString())
+                        .contentType(MediaType.MULTIPART_FORM_DATA)
         ).andExpect(MockMvcResultMatchers.status().isUnprocessableEntity());
     }
 
@@ -98,16 +148,15 @@ public class CustomerResourceTest {
                 null,
                 "name",
                 null,
-                null,
                 LocalDate.now().minusYears(18)
         );
 
-        this.mvc.perform(MockMvcRequestBuilders.post("/v1/customers")
-                .param("email", body.email())
-                .param("password", body.password())
-                .param("name", body.name())
-                .param("birthDate", body.birthDate().toString())
-                .contentType(MediaType.MULTIPART_FORM_DATA)
+        this.mvc.perform(MockMvcRequestBuilders.multipart("/v1/customers")
+                        .param("email", body.email())
+                        .param("password", body.password())
+                        .param("name", body.name())
+                        .param("description", body.description())
+                        .param("birthDate", body.birthDate().toString())
         ).andExpect(MockMvcResultMatchers.status().isUnprocessableEntity());
     }
 
@@ -118,7 +167,6 @@ public class CustomerResourceTest {
                 "email@email.com",
                 "secretpassword",
                 "name",
-                null,
                 null,
                 LocalDate.now().minusYears(18)
         );
@@ -153,7 +201,6 @@ public class CustomerResourceTest {
                 "email@email.com",
                 "secretpassword",
                 "name",
-                null,
                 null,
                 LocalDate.now().minusYears(18)
         ));
@@ -196,7 +243,6 @@ public class CustomerResourceTest {
                 "email@email.com",
                 "secretpassword",
                 "name",
-                null,
                 null,
                 LocalDate.now().minusYears(18)
         ));

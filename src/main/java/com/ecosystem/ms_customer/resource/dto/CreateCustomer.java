@@ -4,14 +4,12 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import org.hibernate.validator.constraints.Length;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 
 public record CreateCustomer(@NotBlank @Email String email,
                              @NotBlank @Length(min = 8, max = 32) String password,
                              @NotBlank String name,
-                             MultipartFile profilePicture,
                              String description,
                              @NotNull LocalDate birthDate
 ) { }
