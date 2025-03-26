@@ -6,6 +6,7 @@ import com.ecosystem.ms_customer.exception.CustomerNotFoundException;
 import com.ecosystem.ms_customer.exception.MinorException;
 import com.ecosystem.ms_customer.resource.dto.CreateCustomer;
 import com.ecosystem.ms_customer.resource.dto.UpdateCustomer;
+import com.ecosystem.ms_customer.resource.dto.UpdateProfilePicture;
 import io.awspring.cloud.dynamodb.DynamoDbTemplate;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
@@ -15,15 +16,26 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockMultipartFile;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.utils.IoUtils;
 
+import java.io.IOException;
 import java.time.LocalDate;
+import java.util.Objects;
 
 @ExtendWith(MockitoExtension.class)
 public class CustomerServiceTest {
 
     @InjectMocks
     private CustomerService service;
+
+    @Mock
+    private StorageFileService storage;
+
+    @Mock
+    private S3Client s3Client;
 
     @Mock
     private DynamoDbTemplate dynamoDb;
@@ -126,5 +138,43 @@ public class CustomerServiceTest {
         Mockito.when(this.dynamoDb.load(Key.builder().partitionValue(email).build(), Customer.class)).thenReturn(null);
 
         Assertions.assertThrows(CustomerNotFoundException.class, () -> this.service.update(email, body));
+    }
+
+    @Test
+    @DisplayName("Should be possible update customer profile picture")
+    void should_be_possible_update_customer_profile_picture() throws IOException {
+        var customer = new Customer();
+        customer.setProfilePicture("http://localhost:4566/customer-profile-picture/1742940126863.jpeg");
+        customer.setEmail("email@email.com");
+
+        var image = IoUtils.toByteArray(Objects.requireNonNull(getClass()
+                .getClassLoader()
+                .getResourceAsStream("upload/default-profile-picture.jpeg"))
+        );
+
+        var file = new MockMultipartFile("default-profile-picture.jpeg", image);
+
+        Mockito.when(this.dynamoDb.load(Key.builder().partitionValue(customer.getEmail()).build(), Customer.class)).thenReturn(customer);
+
+        Mockito.doNothing().when(this.storage).remove(customer.getProfilePicture());
+
+        Assertions.assertDoesNotThrow(() -> this.service.updateProfilePicture(customer.getEmail(), new UpdateProfilePicture(file)));
+    }
+
+    @Test
+    @DisplayName("Should not be possible update customer profile picture when customer not found")
+    void should_not_be_possible_update_customer_profile_picture_when_customer_not_found() throws IOException {
+        var email = "email@email.com";
+
+        var image = IoUtils.toByteArray(Objects.requireNonNull(getClass()
+                .getClassLoader()
+                .getResourceAsStream("upload/default-profile-picture.jpeg"))
+        );
+
+        var file = new MockMultipartFile("default-profile-picture.jpeg", image);
+
+        Mockito.when(this.dynamoDb.load(Key.builder().partitionValue(email).build(), Customer.class)).thenReturn(null);
+
+        Assertions.assertThrows(CustomerNotFoundException.class, () -> this.service.updateProfilePicture(email, new UpdateProfilePicture(file)));
     }
 }

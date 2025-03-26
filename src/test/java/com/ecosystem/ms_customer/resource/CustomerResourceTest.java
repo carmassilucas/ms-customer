@@ -18,16 +18,20 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
+import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.utils.IoUtils;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Objects;
@@ -43,11 +47,11 @@ public class CustomerResourceTest {
     @Autowired
     private DynamoDbTemplate dynamoDb;
 
-    @Value("${aws.localstack.s3.bucket-name}")
-    private String bucket;
-
     @Autowired
     private S3Client s3Client;
+
+    @Value("${aws.localstack.s3.bucket-name}")
+    private String bucket;
 
     @BeforeEach
     void setup() {
@@ -66,7 +70,7 @@ public class CustomerResourceTest {
     }
 
     @Test
-    @DisplayName("Should be possible to create a customer with profile picture.")
+    @DisplayName("Should be possible to create a customer with profile picture")
     void should_be_possible_create_customer_with_profile_picture() throws Exception {
         var image = IoUtils.toByteArray(Objects.requireNonNull(getClass()
                 .getClassLoader()
@@ -94,7 +98,7 @@ public class CustomerResourceTest {
     }
 
     @Test
-    @DisplayName("Should be possible to create a customer without profile picture.")
+    @DisplayName("Should be possible to create a customer without profile picture")
     void should_be_possible_create_customer_without_profile_picture() throws Exception {
         var body = new CreateCustomer(
                 "email@email.com",
@@ -116,7 +120,7 @@ public class CustomerResourceTest {
 
 
     @Test
-    @DisplayName("Should not be possible create customer with already registered email.")
+    @DisplayName("Should not be possible create customer with already registered email")
     void should_not_be_possible_create_customer_with_already_registered_email() throws Exception {
         var body = new CreateCustomer(
                 "email@email.com",
@@ -141,7 +145,7 @@ public class CustomerResourceTest {
     }
 
     @Test
-    @DisplayName("Should not be possible create customer with null data values.")
+    @DisplayName("Should not be possible create customer with null data values")
     void should_not_be_possible_create_customer_with_null_data_values() throws Exception {
         var body = new CreateCustomer(
                 "email@email.com",
@@ -161,7 +165,7 @@ public class CustomerResourceTest {
     }
 
     @Test
-    @DisplayName("Should be possible get profile customer.")
+    @DisplayName("Should be possible get profile customer")
     void should_be_possible_get_profile_customer() throws Exception {
         var body = new CreateCustomer(
                 "email@email.com",
@@ -181,7 +185,7 @@ public class CustomerResourceTest {
     }
 
     @Test
-    @DisplayName("Should not be possible get profile customer when customer not found.")
+    @DisplayName("Should not be possible get profile customer when customer not found")
     void should_not_be_possible_get_profile_customer_when_customer_not_found() throws Exception {
         this.mvc.perform(MockMvcRequestBuilders.get("/v1/customers/email@email.com/profile")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -189,7 +193,7 @@ public class CustomerResourceTest {
     }
 
     @Test
-    @DisplayName("Should be possible update customer data.")
+    @DisplayName("Should be possible update customer data")
     void should_be_possible_update_customer_data() throws Exception {
         var body = new UpdateCustomer(
                 "updated name",
@@ -222,7 +226,7 @@ public class CustomerResourceTest {
     }
 
     @Test
-    @DisplayName("Should not be possible update customer when customer not found.")
+    @DisplayName("Should not be possible update customer when customer not found")
     void should_not_be_possible_update_customer_when_customer_not_found() throws Exception {
         var body = new UpdateCustomer(
                 "updated name",
@@ -237,8 +241,8 @@ public class CustomerResourceTest {
     }
 
     @Test
-    @DisplayName("Should be possible update customer data with null data values.")
-    void should_not_be_possible_update_customer_data_with_null_data_values() throws Exception {
+    @DisplayName("Should be possible update customer data with null data values")
+    void should_be_possible_update_customer_data_with_null_data_values() throws Exception {
         var customer = Customer.fromCreateCustomer(new CreateCustomer(
                 "email@email.com",
                 "secretpassword",
@@ -261,6 +265,101 @@ public class CustomerResourceTest {
         var profile = fromJSON(response);
 
         Assertions.assertEquals(customer.getName(), profile.name());
+    }
+
+    @Test
+    @DisplayName("Should be possible update customer profile picture when already has profile picture")
+    void should_be_possible_update_customer_profile_picture_when_already_has_profile_picture() throws Exception {
+        var image = IoUtils.toByteArray(Objects.requireNonNull(getClass()
+                .getClassLoader()
+                .getResourceAsStream("upload/default-profile-picture.jpeg"))
+        );
+        var file = new MockMultipartFile("default-profile-picture.jpeg",image);
+
+        var name = Instant.now().toEpochMilli() + ".jpeg";
+        var request = PutObjectRequest.builder().bucket(this.bucket).key(name).build();
+
+        this.s3Client.putObject(request, RequestBody.fromBytes(file.getBytes()));
+
+        var customer = Customer.fromCreateCustomer(new CreateCustomer(
+                "email@email.com",
+                "secretpassword",
+                "name",
+                null,
+                LocalDate.now().minusYears(18)
+        ));
+        customer.setProfilePicture("http://localhost:4566/customer-profile-picture/" + name);
+
+        this.dynamoDb.save(customer);
+
+        this.mvc.perform(MockMvcRequestBuilders.multipart(HttpMethod.PATCH, "/v1/customers/email@email.com/profile-picture")
+                .file("profilePicture", file.getBytes())
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+        ).andExpect(MockMvcResultMatchers.status().isNoContent());
+
+        var response = this.mvc.perform(MockMvcRequestBuilders.get("/v1/customers/email@email.com/profile")
+                .contentType(MediaType.APPLICATION_JSON)
+        ).andReturn().getResponse().getContentAsString();
+
+        var profile = fromJSON(response);
+
+        Assertions.assertNotEquals(customer.getProfilePicture(), profile.profilePicture());
+    }
+
+    @Test
+    @DisplayName("Should be possible update customer profile picture when they don't have a profile picture")
+    void should_be_possible_update_customer_profile_picture_when_they_dont_have_profile_picture() throws Exception {
+        var image = IoUtils.toByteArray(Objects.requireNonNull(getClass()
+                .getClassLoader()
+                .getResourceAsStream("upload/default-profile-picture.jpeg"))
+        );
+        var file = new MockMultipartFile("default-profile-picture.jpeg",image);
+
+        var customer = Customer.fromCreateCustomer(new CreateCustomer(
+                "email@email.com",
+                "secretpassword",
+                "name",
+                null,
+                LocalDate.now().minusYears(18)
+        ));
+
+        this.dynamoDb.save(customer);
+
+        var response = this.mvc.perform(MockMvcRequestBuilders.get("/v1/customers/email@email.com/profile")
+                .contentType(MediaType.APPLICATION_JSON)
+        ).andReturn().getResponse().getContentAsString();
+
+        var profile = fromJSON(response);
+
+        Assertions.assertNull(profile.profilePicture());
+
+        this.mvc.perform(MockMvcRequestBuilders.multipart(HttpMethod.PATCH, "/v1/customers/email@email.com/profile-picture")
+                .file("profilePicture", file.getBytes())
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+        ).andExpect(MockMvcResultMatchers.status().isNoContent());
+
+        response = this.mvc.perform(MockMvcRequestBuilders.get("/v1/customers/email@email.com/profile")
+                .contentType(MediaType.APPLICATION_JSON)
+        ).andReturn().getResponse().getContentAsString();
+
+        profile = fromJSON(response);
+
+        Assertions.assertNotNull(profile.profilePicture());
+    }
+
+    @Test
+    @DisplayName("Should not be possible update customer profile picture when customer not found")
+    void should_not_be_possible_update_customer_profile_picture_when_customer_not_found() throws Exception {
+        var image = IoUtils.toByteArray(Objects.requireNonNull(getClass()
+                .getClassLoader()
+                .getResourceAsStream("upload/default-profile-picture.jpeg"))
+        );
+        var file = new MockMultipartFile("default-profile-picture.jpeg",image);
+
+        this.mvc.perform(MockMvcRequestBuilders.multipart(HttpMethod.PATCH, "/v1/customers/email@email.com/profile-picture")
+                .file("profilePicture", file.getBytes())
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+        ).andExpect(MockMvcResultMatchers.status().isNotFound());
     }
 
     private static String toJSON(Object object) throws JsonProcessingException {
