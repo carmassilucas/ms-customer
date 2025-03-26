@@ -8,6 +8,7 @@ import com.ecosystem.ms_customer.exception.MinorException;
 import com.ecosystem.ms_customer.resource.dto.CreateCustomer;
 import com.ecosystem.ms_customer.resource.dto.CustomerProfile;
 import com.ecosystem.ms_customer.resource.dto.UpdateCustomer;
+import com.ecosystem.ms_customer.resource.dto.UpdateProfilePicture;
 import io.awspring.cloud.dynamodb.DynamoDbTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -58,6 +59,20 @@ public class CustomerService {
             throw new CustomerNotFoundException();
 
         copyNonNullProperties(body, customer);
+
+        this.dynamoDb.update(customer);
+    }
+
+    public void updateProfilePicture(String email, UpdateProfilePicture body) {
+        var customer = getCustomer(email);
+
+        if (customer == null)
+            throw new CustomerNotFoundException();
+
+        if (customer.getProfilePicture() != null)
+            this.storage.remove(customer.getProfilePicture());
+
+        customer.setProfilePicture(this.storage.upload(body.profilePicture()));
 
         this.dynamoDb.update(customer);
     }

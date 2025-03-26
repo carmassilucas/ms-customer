@@ -5,10 +5,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.util.Arrays;
 
 @Service
 public class StorageFileService {
@@ -39,5 +41,13 @@ public class StorageFileService {
         }
 
         return this.endpoint + "/" + this.bucketName +  "/" + name;
+    }
+
+    public void remove(String path) {
+        var name = Arrays.stream(path.split("/")).toList().getLast();
+
+        var request = DeleteObjectRequest.builder().bucket(this.bucketName).key(name).build();
+
+        this.s3Client.deleteObject(request);
     }
 }

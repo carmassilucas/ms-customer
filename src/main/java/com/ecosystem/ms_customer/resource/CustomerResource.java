@@ -3,6 +3,7 @@ package com.ecosystem.ms_customer.resource;
 import com.ecosystem.ms_customer.resource.dto.CreateCustomer;
 import com.ecosystem.ms_customer.resource.dto.CustomerProfile;
 import com.ecosystem.ms_customer.resource.dto.UpdateCustomer;
+import com.ecosystem.ms_customer.resource.dto.UpdateProfilePicture;
 import com.ecosystem.ms_customer.service.CustomerService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -34,6 +35,12 @@ public class CustomerResource {
     @PutMapping("/{email}")
     public ResponseEntity<Void> update(@PathVariable("email") String email, @RequestBody UpdateCustomer body) {
         this.service.update(email, body);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping(value = "/{email}/profile-picture", consumes = "multipart/form-data")
+    public ResponseEntity<Void> updateProfilePicture(@PathVariable("email") String email, @ModelAttribute @Valid UpdateProfilePicture body) {
+        this.service.updateProfilePicture(email, body);
         return ResponseEntity.noContent().build();
     }
 }
