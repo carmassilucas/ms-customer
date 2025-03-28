@@ -5,6 +5,7 @@ import com.ecosystem.ms_customer.entity.Customer;
 import com.ecosystem.ms_customer.resource.dto.CreateCustomer;
 import com.ecosystem.ms_customer.resource.dto.CustomerProfile;
 import com.ecosystem.ms_customer.resource.dto.UpdateCustomer;
+import com.ecosystem.ms_customer.resource.dto.UpdatePassword;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -360,6 +361,53 @@ public class CustomerResourceTest {
                 .file("profilePicture", file.getBytes())
                 .contentType(MediaType.MULTIPART_FORM_DATA)
         ).andExpect(MockMvcResultMatchers.status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("Should be possible update customer password")
+    void should_be_possible_update_customer_password() throws Exception {
+        var customer = Customer.fromCreateCustomer(new CreateCustomer(
+                "email@email.com",
+                "secretpassword",
+                "name",
+                null,
+                LocalDate.now().minusYears(18)
+        ));
+
+        this.dynamoDb.save(customer);
+
+        this.mvc.perform(MockMvcRequestBuilders.patch("/v1/customers/email@email.com/password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(toJSON(new UpdatePassword("secretpassword", "newpassword")))
+        ).andExpect(MockMvcResultMatchers.status().isNoContent());
+    }
+
+    @Test
+    @DisplayName("Should not be possible update customer password when customer not found")
+    void should_not_be_possible_update_customer_password_when_customer_not_found() throws Exception {
+        this.mvc.perform(MockMvcRequestBuilders.patch("/v1/customers/email@email.com/password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(toJSON(new UpdatePassword("secretpassword", "newpassword")))
+        ).andExpect(MockMvcResultMatchers.status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("Should not be possible update customer password when password incorrect")
+    void should_not_be_possible_update_customer_password_when_password_incorrect() throws Exception {
+        var customer = Customer.fromCreateCustomer(new CreateCustomer(
+                "email@email.com",
+                "secretpassword",
+                "name",
+                null,
+                LocalDate.now().minusYears(18)
+        ));
+
+        this.dynamoDb.save(customer);
+
+        this.mvc.perform(MockMvcRequestBuilders.patch("/v1/customers/email@email.com/password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(toJSON(new UpdatePassword("incorrectpassword", "newpassword")))
+        ).andExpect(MockMvcResultMatchers.status().isUnprocessableEntity());
     }
 
     private static String toJSON(Object object) throws JsonProcessingException {

@@ -4,8 +4,10 @@ import com.ecosystem.ms_customer.entity.Customer;
 import com.ecosystem.ms_customer.exception.CustomerAlreadyExistsException;
 import com.ecosystem.ms_customer.exception.CustomerNotFoundException;
 import com.ecosystem.ms_customer.exception.MinorException;
+import com.ecosystem.ms_customer.exception.PasswordsNotMatchesException;
 import com.ecosystem.ms_customer.resource.dto.CreateCustomer;
 import com.ecosystem.ms_customer.resource.dto.UpdateCustomer;
+import com.ecosystem.ms_customer.resource.dto.UpdatePassword;
 import com.ecosystem.ms_customer.resource.dto.UpdateProfilePicture;
 import io.awspring.cloud.dynamodb.DynamoDbTemplate;
 import org.junit.jupiter.api.Assertions;
@@ -18,7 +20,6 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
-import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.utils.IoUtils;
 
 import java.io.IOException;
@@ -33,9 +34,6 @@ public class CustomerServiceTest {
 
     @Mock
     private StorageFileService storage;
-
-    @Mock
-    private S3Client s3Client;
 
     @Mock
     private DynamoDbTemplate dynamoDb;
@@ -176,5 +174,46 @@ public class CustomerServiceTest {
         Mockito.when(this.dynamoDb.load(Key.builder().partitionValue(email).build(), Customer.class)).thenReturn(null);
 
         Assertions.assertThrows(CustomerNotFoundException.class, () -> this.service.updateProfilePicture(email, new UpdateProfilePicture(file)));
+    }
+
+    @Test
+    @DisplayName("Should be possible update customer password")
+    void should_be_possible_update_customer_password() {
+        var customer = new Customer();
+        customer.setEmail("email@email.com");
+        customer.setPassword("secretpassword");
+
+        var body = new UpdatePassword("secretpassword", "newpassword");
+
+        Mockito.when(this.dynamoDb.load(Key.builder().partitionValue(customer.getEmail()).build(), Customer.class)).thenReturn(customer);
+
+        this.service.updatePassword(customer.getEmail(), body);
+
+        Mockito.verify(this.dynamoDb, Mockito.times(1)).update(customer);
+    }
+
+    @Test
+    @DisplayName("Should not be possible update customer password when customer not found")
+    void should_not_be_possible_update_customer_password_when_customer_not_found() {
+        var email = "email@email.com";
+        var body = new UpdatePassword("secretpassword", "newpassword");
+
+        Mockito.when(this.dynamoDb.load(Key.builder().partitionValue(email).build(), Customer.class)).thenReturn(null);
+
+        Assertions.assertThrows(CustomerNotFoundException.class, () -> this.service.updatePassword(email, body));
+    }
+
+    @Test
+    @DisplayName("Should not be possible update customer password when password incorrect")
+    void should_not_be_possible_update_customer_password_when_password_incorrect() {
+        var customer = new Customer();
+        customer.setEmail("email@email.com");
+        customer.setPassword("secretpassword");
+
+        var body = new UpdatePassword("incorrectpassword", "newpassword");
+
+        Mockito.when(this.dynamoDb.load(Key.builder().partitionValue(customer.getEmail()).build(), Customer.class)).thenReturn(customer);
+
+        Assertions.assertThrows(PasswordsNotMatchesException.class,() -> this.service.updatePassword(customer.getEmail(), body));
     }
 }
