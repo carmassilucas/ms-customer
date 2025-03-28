@@ -1,9 +1,6 @@
 package com.ecosystem.ms_customer.resource;
 
-import com.ecosystem.ms_customer.resource.dto.CreateCustomer;
-import com.ecosystem.ms_customer.resource.dto.CustomerProfile;
-import com.ecosystem.ms_customer.resource.dto.UpdateCustomer;
-import com.ecosystem.ms_customer.resource.dto.UpdateProfilePicture;
+import com.ecosystem.ms_customer.resource.dto.*;
 import com.ecosystem.ms_customer.service.CustomerService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -41,6 +38,12 @@ public class CustomerResource {
     @PatchMapping(value = "/{email}/profile-picture", consumes = "multipart/form-data")
     public ResponseEntity<Void> updateProfilePicture(@PathVariable("email") String email, @ModelAttribute @Valid UpdateProfilePicture body) {
         this.service.updateProfilePicture(email, body);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{email}/password")
+    public ResponseEntity<Void> updatePassword(@PathVariable("email") String email, @RequestBody @Valid UpdatePassword body) {
+        this.service.updatePassword(email, body);
         return ResponseEntity.noContent().build();
     }
 }

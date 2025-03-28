@@ -1,14 +1,8 @@
 package com.ecosystem.ms_customer.service;
 
 import com.ecosystem.ms_customer.entity.Customer;
-import com.ecosystem.ms_customer.exception.CommonException;
-import com.ecosystem.ms_customer.exception.CustomerAlreadyExistsException;
-import com.ecosystem.ms_customer.exception.CustomerNotFoundException;
-import com.ecosystem.ms_customer.exception.MinorException;
-import com.ecosystem.ms_customer.resource.dto.CreateCustomer;
-import com.ecosystem.ms_customer.resource.dto.CustomerProfile;
-import com.ecosystem.ms_customer.resource.dto.UpdateCustomer;
-import com.ecosystem.ms_customer.resource.dto.UpdateProfilePicture;
+import com.ecosystem.ms_customer.exception.*;
+import com.ecosystem.ms_customer.resource.dto.*;
 import io.awspring.cloud.dynamodb.DynamoDbTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -73,6 +67,20 @@ public class CustomerService {
             this.storage.remove(customer.getProfilePicture());
 
         customer.setProfilePicture(this.storage.upload(body.profilePicture()));
+
+        this.dynamoDb.update(customer);
+    }
+
+    public void updatePassword(String email, UpdatePassword body) {
+        var customer = getCustomer(email);
+
+        if (customer == null)
+            throw new CustomerNotFoundException();
+
+        if (!body.currentPassword().equals(customer.getPassword()))
+            throw new PasswordsNotMatchesException();
+
+        customer.setPassword(body.newPassword());
 
         this.dynamoDb.update(customer);
     }
