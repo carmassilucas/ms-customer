@@ -220,13 +220,15 @@ public class CustomerResourceTest {
 
         this.dynamoDb.save(customer);
 
-        this.mvc.perform(MockMvcRequestBuilders.put("/v1/customers/email@email.com")
+        this.mvc.perform(MockMvcRequestBuilders.put("/v1/customers")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(toJSON(body))
+                .header("Authorization", "Bearer " + generateToken(this.issuer, this.secret, "email@email.com"))
         ).andExpect(MockMvcResultMatchers.status().isNoContent());
 
-        var response = this.mvc.perform(MockMvcRequestBuilders.get("/v1/customers/email@email.com/profile")
+        var response = this.mvc.perform(MockMvcRequestBuilders.get("/v1/customers/profile")
                 .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", "Bearer " + generateToken(this.issuer, this.secret, "email@email.com"))
         ).andReturn().getResponse().getContentAsString();
 
         var profile = fromJSON(response);
@@ -243,9 +245,10 @@ public class CustomerResourceTest {
                 LocalDate.now().minusYears(30)
         );
 
-        this.mvc.perform(MockMvcRequestBuilders.put("/v1/customers/email@email.com")
+        this.mvc.perform(MockMvcRequestBuilders.put("/v1/customers")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(toJSON(body))
+                .header("Authorization", "Bearer " + generateToken(this.issuer, this.secret, "email@email.com"))
         ).andExpect(MockMvcResultMatchers.status().isNotFound());
     }
 
@@ -262,13 +265,15 @@ public class CustomerResourceTest {
 
         this.dynamoDb.save(customer);
 
-        this.mvc.perform(MockMvcRequestBuilders.put("/v1/customers/email@email.com")
+        this.mvc.perform(MockMvcRequestBuilders.put("/v1/customers")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(toJSON(new UpdateCustomer(null,null, null)))
+                .header("Authorization", "Bearer " + generateToken(this.issuer, this.secret, "email@email.com"))
         ).andExpect(MockMvcResultMatchers.status().isNoContent());
 
-        var response = this.mvc.perform(MockMvcRequestBuilders.get("/v1/customers/email@email.com/profile")
+        var response = this.mvc.perform(MockMvcRequestBuilders.get("/v1/customers/profile")
                 .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", "Bearer " + generateToken(this.issuer, this.secret, "email@email.com"))
         ).andReturn().getResponse().getContentAsString();
 
         var profile = fromJSON(response);
@@ -301,13 +306,15 @@ public class CustomerResourceTest {
 
         this.dynamoDb.save(customer);
 
-        this.mvc.perform(MockMvcRequestBuilders.multipart(HttpMethod.PATCH, "/v1/customers/email@email.com/profile-picture")
+        this.mvc.perform(MockMvcRequestBuilders.multipart(HttpMethod.PATCH, "/v1/customers/profile-picture")
                 .file("profilePicture", file.getBytes())
                 .contentType(MediaType.MULTIPART_FORM_DATA)
+                .header("Authorization", "Bearer " + generateToken(this.issuer, this.secret, "email@email.com"))
         ).andExpect(MockMvcResultMatchers.status().isNoContent());
 
-        var response = this.mvc.perform(MockMvcRequestBuilders.get("/v1/customers/email@email.com/profile")
+        var response = this.mvc.perform(MockMvcRequestBuilders.get("/v1/customers/profile")
                 .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", "Bearer " + generateToken(this.issuer, this.secret, "email@email.com"))
         ).andReturn().getResponse().getContentAsString();
 
         var profile = fromJSON(response);
@@ -334,21 +341,24 @@ public class CustomerResourceTest {
 
         this.dynamoDb.save(customer);
 
-        var response = this.mvc.perform(MockMvcRequestBuilders.get("/v1/customers/email@email.com/profile")
+        var response = this.mvc.perform(MockMvcRequestBuilders.get("/v1/customers/profile")
                 .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", "Bearer " + generateToken(this.issuer, this.secret, "email@email.com"))
         ).andReturn().getResponse().getContentAsString();
 
         var profile = fromJSON(response);
 
         Assertions.assertNull(profile.profilePicture());
 
-        this.mvc.perform(MockMvcRequestBuilders.multipart(HttpMethod.PATCH, "/v1/customers/email@email.com/profile-picture")
+        this.mvc.perform(MockMvcRequestBuilders.multipart(HttpMethod.PATCH, "/v1/customers/profile-picture")
                 .file("profilePicture", file.getBytes())
                 .contentType(MediaType.MULTIPART_FORM_DATA)
+                .header("Authorization", "Bearer " + generateToken(this.issuer, this.secret, "email@email.com"))
         ).andExpect(MockMvcResultMatchers.status().isNoContent());
 
-        response = this.mvc.perform(MockMvcRequestBuilders.get("/v1/customers/email@email.com/profile")
+        response = this.mvc.perform(MockMvcRequestBuilders.get("/v1/customers/profile")
                 .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", "Bearer " + generateToken(this.issuer, this.secret, "email@email.com"))
         ).andReturn().getResponse().getContentAsString();
 
         profile = fromJSON(response);
@@ -365,9 +375,10 @@ public class CustomerResourceTest {
         );
         var file = new MockMultipartFile("default-profile-picture.jpeg",image);
 
-        this.mvc.perform(MockMvcRequestBuilders.multipart(HttpMethod.PATCH, "/v1/customers/email@email.com/profile-picture")
+        this.mvc.perform(MockMvcRequestBuilders.multipart(HttpMethod.PATCH, "/v1/customers/profile-picture")
                 .file("profilePicture", file.getBytes())
                 .contentType(MediaType.MULTIPART_FORM_DATA)
+                .header("Authorization", "Bearer " + generateToken(this.issuer, this.secret, "email@email.com"))
         ).andExpect(MockMvcResultMatchers.status().isNotFound());
     }
 
@@ -384,18 +395,20 @@ public class CustomerResourceTest {
 
         this.dynamoDb.save(customer);
 
-        this.mvc.perform(MockMvcRequestBuilders.patch("/v1/customers/email@email.com/password")
+        this.mvc.perform(MockMvcRequestBuilders.patch("/v1/customers/password")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(toJSON(new UpdatePassword("secretpassword", "newpassword")))
+                .header("Authorization", "Bearer " + generateToken(this.issuer, this.secret, "email@email.com"))
         ).andExpect(MockMvcResultMatchers.status().isNoContent());
     }
 
     @Test
     @DisplayName("Should not be possible update customer password when customer not found")
     void should_not_be_possible_update_customer_password_when_customer_not_found() throws Exception {
-        this.mvc.perform(MockMvcRequestBuilders.patch("/v1/customers/email@email.com/password")
+        this.mvc.perform(MockMvcRequestBuilders.patch("/v1/customers/password")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(toJSON(new UpdatePassword("secretpassword", "newpassword")))
+                .header("Authorization", "Bearer " + generateToken(this.issuer, this.secret, "email@email.com"))
         ).andExpect(MockMvcResultMatchers.status().isNotFound());
     }
 
@@ -412,9 +425,10 @@ public class CustomerResourceTest {
 
         this.dynamoDb.save(customer);
 
-        this.mvc.perform(MockMvcRequestBuilders.patch("/v1/customers/email@email.com/password")
+        this.mvc.perform(MockMvcRequestBuilders.patch("/v1/customers/password")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(toJSON(new UpdatePassword("incorrectpassword", "newpassword")))
+                .header("Authorization", "Bearer " + generateToken(this.issuer, this.secret, "email@email.com"))
         ).andExpect(MockMvcResultMatchers.status().isUnprocessableEntity());
     }
 
