@@ -1,5 +1,7 @@
 package com.ecosystem.ms_customer.resource;
 
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.algorithms.Algorithm;
 import com.ecosystem.ms_customer.config.AwsConfigTest;
 import com.ecosystem.ms_customer.entity.Customer;
 import com.ecosystem.ms_customer.resource.dto.*;
@@ -29,6 +31,7 @@ import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.utils.IoUtils;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Arrays;
@@ -50,6 +53,12 @@ public class CustomerResourceTest {
 
     @Value("${aws.localstack.s3.bucket-name}")
     private String bucket;
+
+    @Value("${authentication.jwt.issuer}")
+    private String issuer;
+
+    @Value("${authentication.algorithm.secret}")
+    private String secret;
 
     @BeforeEach
     void setup() {
@@ -177,16 +186,18 @@ public class CustomerResourceTest {
 
         this.dynamoDb.save(customer);
 
-        this.mvc.perform(MockMvcRequestBuilders.get("/v1/customers/email@email.com/profile")
+        this.mvc.perform(MockMvcRequestBuilders.get("/v1/customers/profile")
                 .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", "Bearer " + generateToken(this.issuer, this.secret, body.email()))
         ).andExpect(MockMvcResultMatchers.status().isOk());
     }
 
     @Test
     @DisplayName("Should not be possible get profile customer when customer not found")
     void should_not_be_possible_get_profile_customer_when_customer_not_found() throws Exception {
-        this.mvc.perform(MockMvcRequestBuilders.get("/v1/customers/email@email.com/profile")
+        this.mvc.perform(MockMvcRequestBuilders.get("/v1/customers/profile")
                 .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", "Bearer " + generateToken(this.issuer, this.secret, "email@email.com"))
         ).andExpect(MockMvcResultMatchers.status().isNotFound());
     }
 
@@ -463,5 +474,16 @@ public class CustomerResourceTest {
     public static CustomerProfile fromJSON(String json) throws JsonProcessingException {
         final ObjectMapper objectMapper = new ObjectMapper();
         return objectMapper.readValue(json, CustomerProfile.class);
+    }
+
+    public static String generateToken(String issuer, String secret, String email) {
+        var algorithm = Algorithm.HMAC256(secret);
+        var expiresIn = Instant.now().plus(Duration.ofHours(8));
+
+        return JWT.create()
+                .withIssuer(issuer)
+                .withSubject(email)
+                .withExpiresAt(expiresIn)
+                .sign(algorithm);
     }
 }
