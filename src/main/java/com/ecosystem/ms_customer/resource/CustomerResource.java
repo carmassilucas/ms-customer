@@ -2,6 +2,7 @@ package com.ecosystem.ms_customer.resource;
 
 import com.ecosystem.ms_customer.resource.dto.*;
 import com.ecosystem.ms_customer.service.CustomerService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -30,8 +31,9 @@ public class CustomerResource {
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
-    @GetMapping("/{email}/profile")
-    public ResponseEntity<CustomerProfile> profile(@PathVariable("email") String email) {
+    @GetMapping("/profile")
+    public ResponseEntity<CustomerProfile> profile(HttpServletRequest request) {
+        var email = request.getAttribute("customerEmail").toString();
         return ResponseEntity.ok(this.service.profile(email));
     }
 
