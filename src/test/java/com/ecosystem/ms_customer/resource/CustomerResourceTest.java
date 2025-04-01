@@ -2,10 +2,7 @@ package com.ecosystem.ms_customer.resource;
 
 import com.ecosystem.ms_customer.config.AwsConfigTest;
 import com.ecosystem.ms_customer.entity.Customer;
-import com.ecosystem.ms_customer.resource.dto.CreateCustomer;
-import com.ecosystem.ms_customer.resource.dto.CustomerProfile;
-import com.ecosystem.ms_customer.resource.dto.UpdateCustomer;
-import com.ecosystem.ms_customer.resource.dto.UpdatePassword;
+import com.ecosystem.ms_customer.resource.dto.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -407,6 +404,53 @@ public class CustomerResourceTest {
         this.mvc.perform(MockMvcRequestBuilders.patch("/v1/customers/email@email.com/password")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(toJSON(new UpdatePassword("incorrectpassword", "newpassword")))
+        ).andExpect(MockMvcResultMatchers.status().isUnprocessableEntity());
+    }
+
+    @Test
+    @DisplayName("Should be possible authenticate customer")
+    void should_be_possible_authenticate_customer() throws Exception {
+        var customer = Customer.fromCreateCustomer(new CreateCustomer(
+                "email@email.com",
+                "secretpassword",
+                "name",
+                null,
+                LocalDate.now().minusYears(18)
+        ));
+
+        this.dynamoDb.save(customer);
+
+        this.mvc.perform(MockMvcRequestBuilders.post("/v1/customers/auth")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(toJSON(new AuthCustomer(customer.getEmail(), customer.getPassword())))
+        ).andExpect(MockMvcResultMatchers.status().isOk());
+    }
+
+    @Test
+    @DisplayName("Should not be possible authenticate customer when customer not found")
+    void should_not_be_possible_authenticate_customer_when_customer_not_found() throws Exception {
+        this.mvc.perform(MockMvcRequestBuilders.post("/v1/customers/auth")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(toJSON(new AuthCustomer("email@email.com", "secretpassword")))
+        ).andExpect(MockMvcResultMatchers.status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("Should not be possible authenticate customer when password is incorrect")
+    void should_not_be_possible_authenticate_customer_when_password_is_incorrect() throws Exception {
+        var customer = Customer.fromCreateCustomer(new CreateCustomer(
+                "email@email.com",
+                "secretpassword",
+                "name",
+                null,
+                LocalDate.now().minusYears(18)
+        ));
+
+        this.dynamoDb.save(customer);
+
+        this.mvc.perform(MockMvcRequestBuilders.post("/v1/customers/auth")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(toJSON(new AuthCustomer(customer.getEmail(), "incorrectpassword")))
         ).andExpect(MockMvcResultMatchers.status().isUnprocessableEntity());
     }
 
