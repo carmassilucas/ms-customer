@@ -18,6 +18,12 @@ public class CustomerResource {
         this.service = service;
     }
 
+    @PostMapping("/auth")
+    public ResponseEntity<AuthResponse> auth(@Valid @RequestBody AuthCustomer body) {
+        var response = this.service.auth(body);
+        return ResponseEntity.ok(response);
+    }
+
     @PostMapping(consumes = "multipart/form-data")
     public ResponseEntity<Void> create(@ModelAttribute @Valid CreateCustomer body, @RequestPart(value = "profilePicture",required = false) MultipartFile file) {
         this.service.create(body, file);

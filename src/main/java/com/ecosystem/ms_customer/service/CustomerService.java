@@ -1,25 +1,60 @@
 package com.ecosystem.ms_customer.service;
 
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.algorithms.Algorithm;
 import com.ecosystem.ms_customer.entity.Customer;
 import com.ecosystem.ms_customer.exception.*;
 import com.ecosystem.ms_customer.resource.dto.*;
 import io.awspring.cloud.dynamodb.DynamoDbTemplate;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Arrays;
 
 @Service
 public class CustomerService {
 
+    private final String issuer;
+
+    private final String secret;
+
     private final DynamoDbTemplate dynamoDb;
+
     private final StorageFileService storage;
 
-    public CustomerService(DynamoDbTemplate dynamoDb, StorageFileService storage) {
+    public CustomerService(@Value("${authentication.jwt.issuer}") String issuer,
+                           @Value("${authentication.algorithm.secret}") String secret,
+                           DynamoDbTemplate dynamoDb, StorageFileService storage) {
+        this.issuer = issuer;
+        this.secret = secret;
         this.dynamoDb = dynamoDb;
         this.storage = storage;
+    }
+
+    public AuthResponse auth(AuthCustomer body) {
+        var customer = getCustomer(body.email());
+
+        if (customer == null)
+            throw new CustomerNotFoundException();
+
+        if (!body.password().equals(customer.getPassword()))
+            throw new PasswordsNotMatchesException();
+
+        var algorithm = Algorithm.HMAC256(this.secret);
+        var expiresIn = Instant.now().plus(Duration.ofHours(8));
+
+        var token = JWT.create()
+                .withIssuer(this.issuer)
+                .withSubject(customer.getEmail())
+                .withExpiresAt(expiresIn)
+                .sign(algorithm);
+
+        return new AuthResponse(token, expiresIn.toEpochMilli());
     }
 
     public void create(CreateCustomer body, MultipartFile file) {
