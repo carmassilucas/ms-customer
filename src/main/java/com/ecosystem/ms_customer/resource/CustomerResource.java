@@ -26,7 +26,8 @@ public class CustomerResource {
     }
 
     @PostMapping(consumes = "multipart/form-data")
-    public ResponseEntity<Void> create(@ModelAttribute @Valid CreateCustomer body, @RequestPart(value = "profilePicture",required = false) MultipartFile file) {
+    public ResponseEntity<Void> create(@ModelAttribute @Valid CreateCustomer body,
+                                       @RequestPart(value = "profilePicture",required = false) MultipartFile file) {
         this.service.create(body, file);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
@@ -37,20 +38,26 @@ public class CustomerResource {
         return ResponseEntity.ok(this.service.profile(email));
     }
 
-    @PutMapping("/{email}")
-    public ResponseEntity<Void> update(@PathVariable("email") String email, @RequestBody UpdateCustomer body) {
+    @PutMapping
+    public ResponseEntity<Void> update(HttpServletRequest request,
+                                       @RequestBody UpdateCustomer body) {
+        var email = request.getAttribute("customerEmail").toString();
         this.service.update(email, body);
         return ResponseEntity.noContent().build();
     }
 
-    @PatchMapping(value = "/{email}/profile-picture", consumes = "multipart/form-data")
-    public ResponseEntity<Void> updateProfilePicture(@PathVariable("email") String email, @ModelAttribute @Valid UpdateProfilePicture body) {
+    @PatchMapping(value = "/profile-picture", consumes = "multipart/form-data")
+    public ResponseEntity<Void> updateProfilePicture(HttpServletRequest request,
+                                                     @ModelAttribute @Valid UpdateProfilePicture body) {
+        var email = request.getAttribute("customerEmail").toString();
         this.service.updateProfilePicture(email, body);
         return ResponseEntity.noContent().build();
     }
 
-    @PatchMapping("/{email}/password")
-    public ResponseEntity<Void> updatePassword(@PathVariable("email") String email, @RequestBody @Valid UpdatePassword body) {
+    @PatchMapping("/password")
+    public ResponseEntity<Void> updatePassword(HttpServletRequest request,
+                                               @RequestBody @Valid UpdatePassword body) {
+        var email = request.getAttribute("customerEmail").toString();
         this.service.updatePassword(email, body);
         return ResponseEntity.noContent().build();
     }
