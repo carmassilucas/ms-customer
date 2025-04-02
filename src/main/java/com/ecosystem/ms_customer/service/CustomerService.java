@@ -71,7 +71,7 @@ public class CustomerService {
         var customer = Customer.fromCreateCustomer(body);
         customer.setPassword(this.encoder.encode(body.password()));
 
-        if (file != null)
+        if (file != null && !file.isEmpty())
             customer.setProfilePicture(this.storage.upload(file));
 
         this.dynamoDb.save(customer);
