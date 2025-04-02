@@ -88,7 +88,7 @@ public class CustomerResourceTest {
                 .getResourceAsStream("upload/default-profile-picture.jpeg"))
         );
 
-        var file = new MockMultipartFile("default-profile-picture.jpeg",image);
+        var file = new MockMultipartFile("default-profile-picture.jpeg", image);
 
         var body = new CreateCustomer(
                 "email@email.com",
@@ -106,6 +106,43 @@ public class CustomerResourceTest {
                         .param("birthDate", body.birthDate().toString())
                         .contentType(MediaType.MULTIPART_FORM_DATA)
         ).andExpect(MockMvcResultMatchers.status().isCreated());
+    }
+
+    @Test
+    @DisplayName("Should be possible create customer with corrupted profile picture")
+    void should_be_possible_create_customer_with_corrupted_profile_picture() throws Exception {
+        var image = IoUtils.toByteArray(Objects.requireNonNull(getClass()
+                .getClassLoader()
+                .getResourceAsStream("upload/corrupted-profile-picture.jpeg"))
+        );
+
+        var file = new MockMultipartFile("corrupted-profile-picture.jpeg", image);
+
+        var body = new CreateCustomer(
+                "email@email.com",
+                "secretpassword",
+                "name",
+                null,
+                LocalDate.now().minusYears(18)
+        );
+
+        this.mvc.perform(MockMvcRequestBuilders.multipart("/v1/customers")
+                .file("profilePicture", file.getBytes())
+                .param("email", body.email())
+                .param("password", body.password())
+                .param("name", body.name())
+                .param("birthDate", body.birthDate().toString())
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+        ).andExpect(MockMvcResultMatchers.status().isCreated());
+
+        var response = this.mvc.perform(MockMvcRequestBuilders.get("/v1/customers/profile")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", "Bearer " + generateToken(this.issuer, this.secret, "email@email.com"))
+        ).andReturn().getResponse().getContentAsString();
+
+        var profile = fromJSON(response);
+
+        Assertions.assertNull(profile.profilePicture());
     }
 
     @Test
