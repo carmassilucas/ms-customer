@@ -7,6 +7,7 @@ import com.ecosystem.ms_customer.exception.*;
 import com.ecosystem.ms_customer.resource.dto.*;
 import io.awspring.cloud.dynamodb.DynamoDbTemplate;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
@@ -25,14 +26,17 @@ public class CustomerService {
 
     private final DynamoDbTemplate dynamoDb;
 
+    private final PasswordEncoder encoder;
+
     private final StorageFileService storage;
 
     public CustomerService(@Value("${authentication.jwt.issuer}") String issuer,
                            @Value("${authentication.algorithm.secret}") String secret,
-                           DynamoDbTemplate dynamoDb, StorageFileService storage) {
+                           DynamoDbTemplate dynamoDb, PasswordEncoder encoder, StorageFileService storage) {
         this.issuer = issuer;
         this.secret = secret;
         this.dynamoDb = dynamoDb;
+        this.encoder = encoder;
         this.storage = storage;
     }
 
@@ -42,7 +46,7 @@ public class CustomerService {
         if (customer == null)
             throw new CustomerNotFoundException();
 
-        if (!body.password().equals(customer.getPassword()))
+        if (!this.encoder.matches(body.password(), customer.getPassword()))
             throw new PasswordsNotMatchesException();
 
         var algorithm = Algorithm.HMAC256(this.secret);
@@ -65,6 +69,7 @@ public class CustomerService {
             throw new CustomerAlreadyExistsException();
 
         var customer = Customer.fromCreateCustomer(body);
+        customer.setPassword(this.encoder.encode(body.password()));
 
         if (file != null)
             customer.setProfilePicture(this.storage.upload(file));
@@ -112,7 +117,7 @@ public class CustomerService {
         if (customer == null)
             throw new CustomerNotFoundException();
 
-        if (!body.currentPassword().equals(customer.getPassword()))
+        if (!this.encoder.matches(body.currentPassword(), customer.getPassword()))
             throw new PasswordsNotMatchesException();
 
         customer.setPassword(body.newPassword());
