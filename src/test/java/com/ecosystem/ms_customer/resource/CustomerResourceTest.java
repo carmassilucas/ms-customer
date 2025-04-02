@@ -21,6 +21,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
@@ -47,6 +48,9 @@ public class CustomerResourceTest {
 
     @Autowired
     private DynamoDbTemplate dynamoDb;
+
+    @Autowired
+    private PasswordEncoder encoder;
 
     @Autowired
     private S3Client s3Client;
@@ -392,6 +396,7 @@ public class CustomerResourceTest {
                 null,
                 LocalDate.now().minusYears(18)
         ));
+        customer.setPassword(this.encoder.encode(customer.getPassword()));
 
         this.dynamoDb.save(customer);
 
@@ -442,12 +447,13 @@ public class CustomerResourceTest {
                 null,
                 LocalDate.now().minusYears(18)
         ));
+        customer.setPassword(this.encoder.encode(customer.getPassword()));
 
         this.dynamoDb.save(customer);
 
         this.mvc.perform(MockMvcRequestBuilders.post("/v1/customers/auth")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(toJSON(new AuthCustomer(customer.getEmail(), customer.getPassword())))
+                .content(toJSON(new AuthCustomer(customer.getEmail(), "secretpassword")))
         ).andExpect(MockMvcResultMatchers.status().isOk());
     }
 

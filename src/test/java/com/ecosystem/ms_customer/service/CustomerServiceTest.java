@@ -19,6 +19,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.utils.IoUtils;
 
@@ -34,10 +35,13 @@ public class CustomerServiceTest {
     private CustomerService service;
 
     @Mock
-    private StorageFileService storage;
+    private DynamoDbTemplate dynamoDb;
 
     @Mock
-    private DynamoDbTemplate dynamoDb;
+    private PasswordEncoder encoder;
+
+    @Mock
+    private StorageFileService storage;
 
     @Value("${authentication.jwt.issuer}")
     private String issuer;
@@ -47,7 +51,7 @@ public class CustomerServiceTest {
 
     @BeforeEach
     void setup() {
-        this.service = new CustomerService(this.issuer, this.secret, this.dynamoDb, this.storage);
+        this.service = new CustomerService(this.issuer, this.secret, this.dynamoDb, this.encoder, this.storage);
     }
 
     @Test
