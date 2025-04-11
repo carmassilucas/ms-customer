@@ -31,23 +31,27 @@ public class SecurityFilterConfig extends OncePerRequestFilter {
             throws ServletException, IOException {
         String header = request.getHeader("Authorization");
         if (header == null) {
+            logger.debug("Header de autenticação não encontrado, continuando sem autenticação");
             filterChain.doFilter(request, response);
             return;
         }
 
+        logger.debug("Header de autenticação encontrado, iniciando validação do token");
         var verifier = JWT.require(Algorithm.HMAC256(this.secret)).withIssuer(this.issuer).build();
 
         var token = verifier.verify(header.replace("Bearer ", ""));
         if (token == null) {
+            logger.warn("Falha na verificação do token");
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             return;
         }
 
-        request.setAttribute("customerEmail", token.getSubject());
+        var email = token.getSubject();
 
-        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
-                token.getSubject(), null, null
-        ));
+        request.setAttribute("customerEmail", email);
+        logger.info("Token validado com sucesso para o usuário " + email);
+
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(email, null, null));
 
         filterChain.doFilter(request, response);
     }

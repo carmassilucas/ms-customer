@@ -1,5 +1,7 @@
 package com.ecosystem.ms_customer.service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -15,6 +17,7 @@ import java.util.Arrays;
 @Service
 public class StorageFileService {
 
+    private static final Logger log = LoggerFactory.getLogger(StorageFileService.class);
     private final String endpoint;
 
     private final String bucketName;
@@ -37,9 +40,11 @@ public class StorageFileService {
         try {
             this.s3Client.putObject(request, RequestBody.fromBytes(multipartFile.getBytes()));
         } catch (IOException e) {
+            log.error("Erro ao enviar arquivo ao bucket: {}", e.getMessage());
             return null;
         }
 
+        log.info("Upload do arquivo feito com sucesso, retornando uri");
         return this.endpoint + "/" + this.bucketName +  "/" + name;
     }
 
@@ -49,5 +54,6 @@ public class StorageFileService {
         var request = DeleteObjectRequest.builder().bucket(this.bucketName).key(name).build();
 
         this.s3Client.deleteObject(request);
+        log.info("Arquivo removido do bucket com sucesso");
     }
 }
